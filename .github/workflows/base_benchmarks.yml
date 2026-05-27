@@ -1,0 +1,67 @@
+name: Benchmark base branch
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Build and push the benchmark OCI image to the Bencher registry.
+  # The image is self-contained: pixi installs conda + conda-mock-server from
+  # the lockfile so no outbound network access is needed at benchmark runtime.
+  # ---------------------------------------------------------------------------
+  build_and_push_image:
+    name: Build and push benchmark image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Bencher OCI registry
+        run: |
+          echo "${{ secrets.BENCHER_API_KEY }}" \
+            | docker login registry.bencher.dev -u _ --password-stdin
+
+      - name: Build image (linux/amd64)
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            -t registry.bencher.dev/${{ secrets.BENCHER_PROJECT_SLUG }}:latest \
+            .
+
+      - name: Push image
+        run: |
+          docker push registry.bencher.dev/${{ secrets.BENCHER_PROJECT_SLUG }}:latest
+
+  # ---------------------------------------------------------------------------
+  # Run benchmarks on Bencher bare metal using the image pushed above.
+  # Results are tracked over time to detect performance regressions on main.
+  # ---------------------------------------------------------------------------
+  benchmark_base_branch:
+    name: Track base branch benchmarks (bare metal)
+    needs: build_and_push_image
+    permissions:
+      checks: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Bencher CLI
+        uses: bencherdev/bencher@main
+
+      - name: Track base branch benchmarks with Bencher
+        run: |
+          bencher run \
+            --project "${{ secrets.BENCHER_PROJECT_SLUG }}" \
+            --key "${{ secrets.BENCHER_API_KEY }}" \
+            --branch main \
+            --testbed bencher-bare-metal \
+            --threshold-measure latency \
+            --threshold-test t_test \
+            --threshold-max-sample-size 64 \
+            --threshold-upper-boundary 0.99 \
+            --thresholds-reset \
+            --error-on-alert \
+            --adapter python_pytest \
+            --file /results/results.json \
+            --image "${{ secrets.BENCHER_PROJECT_SLUG }}:latest" \
+            --github-actions "${{ secrets.GITHUB_TOKEN }}"

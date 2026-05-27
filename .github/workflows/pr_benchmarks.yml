@@ -1,0 +1,55 @@
+name: Benchmark pull request
+
+on:
+  pull_request:
+    types: [opened, reopened, edited, synchronize]
+
+jobs:
+  benchmark_pr_branch:
+    name: Track PR branch benchmarks (bare metal)
+    # DO NOT REMOVE: prevents secrets from leaking on fork PRs.
+    # Fork PRs are handled by the separate fork_pr_benchmarks_* workflows.
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Bencher OCI registry
+        run: |
+          echo "${{ secrets.BENCHER_API_KEY }}" \
+            | docker login registry.bencher.dev -u _ --password-stdin
+
+      - name: Build image (linux/amd64)
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            -t registry.bencher.dev/${{ secrets.BENCHER_PROJECT_SLUG }}:latest \
+            .
+
+      - name: Push image
+        run: |
+          docker push registry.bencher.dev/${{ secrets.BENCHER_PROJECT_SLUG }}:latest
+
+      - name: Install Bencher CLI
+        uses: bencherdev/bencher@main
+
+      - name: Track PR benchmarks with Bencher
+        run: |
+          bencher run \
+            --project "${{ secrets.BENCHER_PROJECT_SLUG }}" \
+            --key "${{ secrets.BENCHER_API_KEY }}" \
+            --branch "$GITHUB_HEAD_REF" \
+            --start-point "$GITHUB_BASE_REF" \
+            --start-point-hash "${{ github.event.pull_request.base.sha }}" \
+            --start-point-clone-thresholds \
+            --start-point-reset \
+            --testbed bencher-bare-metal \
+            --error-on-alert \
+            --adapter python_pytest \
+            --file /results/results.json \
+            --image "${{ secrets.BENCHER_PROJECT_SLUG }}:latest" \
+            --github-actions "${{ secrets.GITHUB_TOKEN }}"

@@ -1,0 +1,18 @@
+[workspace]
+authors = ["Travis Hathaway <travis.j.hathaway@gmail.com>"]
+channels = ["conda-forge", "thath"]
+name = "conda-bencher-baremetal"
+platforms = ["osx-arm64", "linux-64"]
+version = "0.1.0"
+
+[tasks]
+test = "pytest tests/"
+bench = "pytest --benchmark-json /results/results.json tests/"
+build-image = "./build-image.sh"
+push-image = "./push-image.sh"
+
+[dependencies]
+conda = ">=26.5.0,<27"
+conda-mock-server = ">=0.1.0,<0.2"
+pytest = ">=8.0"
+pytest-benchmark = ">=4.0"
