@@ -7,9 +7,10 @@ version = "0.1.0"
 
 [tasks]
 test = "pytest tests/"
-bench = "pytest --benchmark-json /results/results.json tests/"
+bench = "pytest --benchmark-json results.json tests/"
 build-image = "./build-image.sh"
 push-image = "./push-image.sh"
+bencher-run = "./bencher-run.sh"
 
 [dependencies]
 conda = ">=26.5.0,<27"

@@ -35,9 +35,6 @@ RUN pixi install --locked
 COPY pyproject.toml ./
 COPY tests/ ./tests/
 
-# Ensure the results directory exists; the bench task writes JSON here.
-RUN mkdir -p /results
-
 # Disable cuda detection
 ENV CONDA_OVERRIDE_CUDA=0
 
@@ -48,6 +45,4 @@ ENV CONDA_OVERRIDE_CUDA=0
 ENV CONDA_MOCK_SERVER_ROOT_DIR=/workspace/.pixi/envs/default/local/share/conda-mock-server
 
 # Run benchmarks via pixi so the correct conda environment is activated.
-# The `bench` task expands to:
-#   pytest --benchmark-json /results/results.json tests/
 ENTRYPOINT ["pixi", "run", "bench"]

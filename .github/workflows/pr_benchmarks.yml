@@ -50,6 +50,5 @@ jobs:
             --testbed bencher-bare-metal \
             --error-on-alert \
             --adapter python_pytest \
-            --file /results/results.json \
             --image "${{ secrets.BENCHER_PROJECT_SLUG }}:latest" \
             --github-actions "${{ secrets.GITHUB_TOKEN }}"
