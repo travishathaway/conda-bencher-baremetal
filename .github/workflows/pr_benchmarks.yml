@@ -21,18 +21,18 @@ jobs:
       - name: Log in to Bencher OCI registry
         run: |
           echo "${{ secrets.BENCHER_API_KEY }}" \
-            | docker login registry.bencher.dev -u _ --password-stdin
+            | podman login registry.bencher.dev -u "${{ secrets.BENCHER_PROJECT_SLUG }}" --password-stdin
 
       - name: Build image (linux/amd64)
         run: |
-          docker build \
+          podman build \
             --platform linux/amd64 \
             -t registry.bencher.dev/${{ secrets.BENCHER_PROJECT_SLUG }}:latest \
             .
 
       - name: Push image
         run: |
-          docker push registry.bencher.dev/${{ secrets.BENCHER_PROJECT_SLUG }}:latest
+          podman push registry.bencher.dev/${{ secrets.BENCHER_PROJECT_SLUG }}:latest
 
       - name: Install Bencher CLI
         uses: bencherdev/bencher@main
@@ -51,4 +51,4 @@ jobs:
             --error-on-alert \
             --adapter python_pytest \
             --image "${{ secrets.BENCHER_PROJECT_SLUG }}:latest" \
-            --github-actions "${{ secrets.GITHUB_TOKEN }}"
+            --file results.json
